@@ -18,6 +18,7 @@ public class MandalaBean extends AbstractBean {
     public static final int TRANSPORT_TCP = 0;
     public static final int TRANSPORT_WS = 1;
 
+    public String username; // [新增]
     public String password;
 
     // TLS Settings
@@ -33,6 +34,7 @@ public class MandalaBean extends AbstractBean {
     @Override
     public void initializeDefaultValues() {
         super.initializeDefaultValues();
+        if (username == null) username = "";
         if (password == null) password = "";
         if (sni == null) sni = "";
         if (path == null) path = "/";
@@ -42,6 +44,7 @@ public class MandalaBean extends AbstractBean {
     @Override
     public void serializeToBuffer(@NonNull ByteBufferOutput output) {
         super.serializeToBuffer(output);
+        output.writeString(username);
         output.writeString(password);
         output.writeInt(security);
         output.writeString(sni);
@@ -54,6 +57,7 @@ public class MandalaBean extends AbstractBean {
     @Override
     public void deserializeFromBuffer(@NonNull ByteBufferInput input) {
         super.deserializeFromBuffer(input);
+        username = input.readString();
         password = input.readString();
         security = input.readInt();
         sni = input.readString();
