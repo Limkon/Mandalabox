@@ -9,19 +9,19 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/dialer"
 	"github.com/sagernet/sing-box/common/tls"
-	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/json"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
+	"github.com/sagernet/sing/common/rw"
 )
 
-// 注册 "mandala" 类型到 sing-box 系统
 func init() {
 	adapter.RegisterOutbound("mandala", NewOutbound)
 }
 
-// Options 定义 Android 端传来的 JSON 结构
+// Options 定义 Android 端传来的配置结构
 type Options struct {
 	option.OutboundCommonOptions
 	Server   string                     `json:"server"`
@@ -56,14 +56,12 @@ func NewOutbound(ctx context.Context, outboundOption option.Outbound) (adapter.O
 		client: NewClient(options.Username, options.Password),
 	}
 
-	// 初始化底层 TCP 拨号器
 	var err error
 	outbound.dialer, err = dialer.New(ctx, options.DialerOptions, outboundOption.Tag != "")
 	if err != nil {
 		return nil, err
 	}
 
-	// 初始化 TLS 配置 (如果有)
 	if options.TLS != nil {
 		outbound.tlsConfig, err = tls.NewClient(ctx, options.Server, options.TLS)
 		if err != nil {
@@ -83,13 +81,13 @@ func (h *Outbound) Tag() string {
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	// 1. 连接代理服务器 TCP
+	// 1. 连接代理服务器
 	conn, err := h.dialer.DialContext(ctx, "tcp", h.serverAddr)
 	if err != nil {
 		return nil, err
 	}
 
-	// 2. 处理 TLS (如果启用)
+	// 2. TLS 握手 (如果启用)
 	if h.tlsConfig != nil {
 		conn, err = tls.ClientHandshake(ctx, conn, h.tlsConfig)
 		if err != nil {
@@ -98,28 +96,71 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 		}
 	}
 
-	// 3. 封装 Mandala 协议
-	// 注意：Mandala 协议在第一次写入数据时才会发送握手包，因此我们使用 wrapper
+	// 3. 返回封装后的连接，处理 Mandala 握手
 	return &Conn{
 		Conn:   conn,
 		Client: h.client,
-		Host:   destination.String(), // 目标地址 (Host:Port)
+		Host:   destination.String(),
 		Port:   destination.Port,
 	}, nil
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	// 暂不实现 UDP 支持，直接返回错误
-	// Mandala 的原始实现主要针对 TCP 代理
 	return nil, os.ErrInvalid
 }
 
 func (h *Outbound) InterfaceUpdateListener() func() {
-	// 监听网络接口变化 (通常不需要，除非有特殊绑定逻辑)
 	return nil
 }
 
 func (h *Outbound) Dependencies() []string {
-	// 定义依赖的出站 (例如 chain / selector)，这里没有
 	return nil
+}
+
+// Conn 封装 net.Conn，用于在第一次写入时发送握手包
+type Conn struct {
+	net.Conn
+	Client     *Client
+	Host       string
+	Port       uint16
+	handshaked bool
+}
+
+func (c *Conn) handshake() error {
+	if c.handshaked {
+		return nil
+	}
+	// 使用纯 Go 的 protocol 逻辑构建握手包
+	payload, err := c.Client.BuildHandshakePayload(c.Host, int(c.Port))
+	if err != nil {
+		return err
+	}
+	_, err = c.Conn.Write(payload)
+	if err == nil {
+		c.handshaked = true
+	}
+	return err
+}
+
+func (c *Conn) Write(b []byte) (n int, err error) {
+	if err := c.handshake(); err != nil {
+		return 0, err
+	}
+	return c.Conn.Write(b)
+}
+
+// WriteBuffer 实现 sing-box 的 LinkWriter 接口，提高性能
+func (c *Conn) WriteBuffer(buffer *buf.Buffer) error {
+	if err := c.handshake(); err != nil {
+		return err
+	}
+	return rw.WriteBuffer(c.Conn, buffer)
+}
+
+// ReaderFrom 实现 io.ReaderFrom
+func (c *Conn) ReadFrom(r io.Reader) (n int64, err error) {
+	if err := c.handshake(); err != nil {
+		return 0, err
+	}
+	return c.Conn.(io.ReaderFrom).ReadFrom(r)
 }
