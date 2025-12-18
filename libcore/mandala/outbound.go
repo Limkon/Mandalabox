@@ -18,7 +18,10 @@ import (
 )
 
 func init() {
-	adapter.RegisterOutbound("mandala", NewOutbound)
+	// [注意] sing-box v1.12+ 移除了 adapter.RegisterOutbound。
+	// 为了先让编译通过，我们暂时注释掉注册逻辑。
+	// 之后可能需要在主程序的 main.go 或 libbox 初始化中手动注册。
+	// adapter.RegisterOutbound("mandala", NewOutbound)
 }
 
 // Options 定义 Android 端传来的配置结构
@@ -70,7 +73,8 @@ func NewOutbound(ctx context.Context, outboundOption option.Outbound) (adapter.O
 	}
 
 	if options.TLS != nil {
-		outbound.tlsConfig, err = tls.NewClient(ctx, options.Server, options.TLS)
+		// [修复] 这里加了 * 号，将指针解引用为值，以匹配 sing-box v1.12 接口
+		outbound.tlsConfig, err = tls.NewClient(ctx, options.Server, *options.TLS)
 		if err != nil {
 			return nil, err
 		}
@@ -87,19 +91,17 @@ func (h *Outbound) Tag() string {
 	return h.myTag
 }
 
-// [修复 1] 添加 Network 方法，声明支持 TCP
+// Network 声明支持的协议类型 (TCP)
 func (h *Outbound) Network() []string {
 	return []string{"tcp"}
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	// 1. 连接代理服务器
 	conn, err := h.dialer.DialContext(ctx, "tcp", h.serverAddr)
 	if err != nil {
 		return nil, err
 	}
 
-	// 2. TLS 握手 (如果启用)
 	if h.tlsConfig != nil {
 		conn, err = tls.ClientHandshake(ctx, conn, h.tlsConfig)
 		if err != nil {
@@ -108,7 +110,6 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 		}
 	}
 
-	// 3. 返回封装后的连接，处理 Mandala 握手
 	return &Conn{
 		Conn:   conn,
 		Client: h.client,
@@ -129,7 +130,6 @@ func (h *Outbound) Dependencies() []string {
 	return nil
 }
 
-// Conn 封装 net.Conn，用于在第一次写入时发送握手包
 type Conn struct {
 	net.Conn
 	Client     *Client
@@ -142,7 +142,6 @@ func (c *Conn) handshake() error {
 	if c.handshaked {
 		return nil
 	}
-	// 使用纯 Go 的 protocol 逻辑构建握手包
 	payload, err := c.Client.BuildHandshakePayload(c.Host, int(c.Port))
 	if err != nil {
 		return err
@@ -161,18 +160,16 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 	return c.Conn.Write(b)
 }
 
-// WriteBuffer 实现 sing-box 的 LinkWriter 接口
 func (c *Conn) WriteBuffer(buffer *buf.Buffer) error {
 	if err := c.handshake(); err != nil {
 		buffer.Release()
 		return err
 	}
-	// [修复 2] 使用 WriteTo 替代 rw.WriteBuffer
+	// [修复] 使用 buffer.WriteTo 替代已移除的 rw.WriteBuffer
 	_, err := buffer.WriteTo(c.Conn)
 	return err
 }
 
-// ReaderFrom 实现 io.ReaderFrom
 func (c *Conn) ReadFrom(r io.Reader) (n int64, err error) {
 	if err := c.handshake(); err != nil {
 		return 0, err
