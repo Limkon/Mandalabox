@@ -5,23 +5,21 @@ import androidx.preference.CheckBoxPreference
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import io.nekohasekai.sagernet.fmt.mandala.MandalaBean
-// 尝试使用单数形式的包名，如果仍报错，通常基类已经包含此引用
-import io.nekohasekai.sagernet.ui.preference.PreferenceBindingManager
+// [修正 1] 包名修正為 preferences (複數)
+import io.nekohasekai.sagernet.ui.preferences.PreferenceBindingManager
 
 class MandalaSettingsActivity : ProfileSettingsActivity<MandalaBean>() {
 
-    // [修正 1] 必须实现此方法，返回一个新的 Bean 实例
     override fun createEntity(): MandalaBean {
         return MandalaBean()
     }
 
-    // [修正 2] 使用 initializeCallback 而不是 onCreate
-    // 这样系统会将准备好的 binding 管理器传给我们，无需自己实例化
-    override fun initializeCallback(binding: PreferenceBindingManager) {
+    // [修正 2] 方法名修正為 init，這才是基類要求的抽象方法
+    override fun init(binding: PreferenceBindingManager) {
         // server
         binding.bind(
             findPreference("server"), 
-            bean.serverAddress, // [修正 3] 使用 'bean' 而不是 'profile'
+            bean.serverAddress, 
             { bean.serverAddress = it }
         )
 
