@@ -5,8 +5,8 @@ import androidx.preference.CheckBoxPreference
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import io.nekohasekai.sagernet.fmt.mandala.MandalaBean
-// [修正 1] 包名修正為 preferences (複數)
-import io.nekohasekai.sagernet.ui.preferences.PreferenceBinder
+// [修正 1] 使用 NekoBox 專有的包路徑
+import moe.matsuri.nb4a.ui.preference.PreferenceBinder
 
 class MandalaSettingsActivity : ProfileSettingsActivity<MandalaBean>() {
 
@@ -14,19 +14,20 @@ class MandalaSettingsActivity : ProfileSettingsActivity<MandalaBean>() {
         return MandalaBean()
     }
 
+    // [修正 2] 此時 PreferenceBinder 應該能正確識別，init 方法簽名匹配
     override fun init(binding: PreferenceBinder) {
         // server
         binding.bind(
             findPreference("server"), 
-            profile.serverAddress, // [修正 2] 變量名改回 profile
-            { profile.serverAddress = it }
+            bean.serverAddress, // [修正 3] 使用 'bean' 而不是 'profile'
+            { bean.serverAddress = it }
         )
 
         // port
         binding.bind(
             findPreference("port"),
-            profile.serverPort,
-            { profile.serverPort = it },
+            bean.serverPort,
+            { bean.serverPort = it },
             Int::toString,
             { it.toInt() }
         )
@@ -34,22 +35,22 @@ class MandalaSettingsActivity : ProfileSettingsActivity<MandalaBean>() {
         // username
         binding.bind(
             findPreference("username"),
-            profile.username,
-            { profile.username = it }
+            bean.username,
+            { bean.username = it }
         )
 
         // password
         binding.bind(
             findPreference("password"),
-            profile.password,
-            { profile.password = it }
+            bean.password,
+            { bean.password = it }
         )
 
         // security (TLS)
         binding.bind(
             findPreference("security"),
-            profile.security,
-            { profile.security = it },
+            bean.security,
+            { bean.security = it },
             Int::toString,
             { it.toInt() }
         )
@@ -57,15 +58,15 @@ class MandalaSettingsActivity : ProfileSettingsActivity<MandalaBean>() {
         // sni
         binding.bind(
             findPreference("sni"),
-            profile.sni,
-            { profile.sni = it }
+            bean.sni,
+            { bean.sni = it }
         )
 
         // allow_insecure
         binding.bind(
             findPreference("allow_insecure"),
-            profile.allowInsecure,
-            { profile.allowInsecure = it }
+            bean.allowInsecure,
+            { bean.allowInsecure = it }
         )
     }
 }
