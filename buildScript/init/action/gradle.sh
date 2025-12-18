@@ -1,20 +1,16 @@
 #!/bin/bash
-# Prepare script for Actions Gradle build
-set -e
 
-#### Download assets
-bash buildScript/lib/assets.sh
+# 获取当前环境安装的 NDK 版本（取第一个找到的）
+NDK_VER=$(ls -1 ${ANDROID_HOME}/ndk | head -n 1)
 
-exit
+echo "sdk.dir=${ANDROID_HOME}" > local.properties
+# 动态写入检测到的 NDK 版本，而不是硬编码 25.0.8775105
+if [ ! -z "$NDK_VER" ]; then
+    echo "ndk.dir=${ANDROID_HOME}/ndk/${NDK_VER}" >> local.properties
+else
+    # 如果没找到，尝试让 Gradle 自己决定（或者你可以指定一个默认值）
+    echo "ndk.dir=${ANDROID_HOME}/ndk-bundle" >> local.properties
+fi
 
-#### Download "external" from Internet
-#rm -rf external
-#mkdir -p external
-#cd external
-#
-#echo "Downloading preferencex-android"
-#wget -q -O tmp.zip https://github.com/SagerNet/preferencex-android/archive/8bdb0c6ae44f378b073c6a1c850d03d729b70ff8.zip
-#unzip tmp.zip > /dev/null 2>&1
-#mv preferencex-android-* preferencex
-#
-#rm tmp.zip
+# 保持原有逻辑
+export LOCAL_PROPERTIES=""
