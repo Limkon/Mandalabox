@@ -3,6 +3,7 @@ package mandala
 import (
 	"context"
 	"fmt"
+	"io" // [修复] 添加缺失的 io 包
 	"net"
 	"os"
 
@@ -23,7 +24,8 @@ func init() {
 
 // Options 定义 Android 端传来的配置结构
 type Options struct {
-	option.OutboundCommonOptions
+	// [修复] 移除 option.OutboundCommonOptions，在新版中直接嵌入 DialerOptions
+	option.DialerOptions
 	Server   string                     `json:"server"`
 	Port     uint16                     `json:"port"`
 	Username string                     `json:"username"`
@@ -37,13 +39,21 @@ type Outbound struct {
 	dialer     N.Dialer
 	serverAddr M.Socksaddr
 	client     *Client
-	tlsConfig  *tls.Config
+	tlsConfig  tls.Config // [修复] tls.Config 是接口，不需要指针 (*)
 }
 
 func NewOutbound(ctx context.Context, outboundOption option.Outbound) (adapter.Outbound, error) {
 	var options Options
-	if err := json.Unmarshal(outboundOption.Options, &options); err != nil {
-		return nil, err
+
+	// [修复] outboundOption.Options 已经是 map[string]any，需要先转回 bytes 再解析
+	if outboundOption.Options != nil {
+		bytes, err := json.Marshal(outboundOption.Options)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(bytes, &options); err != nil {
+			return nil, err
+		}
 	}
 
 	outbound := &Outbound{
@@ -57,6 +67,7 @@ func NewOutbound(ctx context.Context, outboundOption option.Outbound) (adapter.O
 	}
 
 	var err error
+	// [修复] 适配新的 Dialer API
 	outbound.dialer, err = dialer.New(ctx, options.DialerOptions, outboundOption.Tag != "")
 	if err != nil {
 		return nil, err
@@ -89,6 +100,7 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 
 	// 2. TLS 握手 (如果启用)
 	if h.tlsConfig != nil {
+		// [修复] tls.Config 接口直接传值
 		conn, err = tls.ClientHandshake(ctx, conn, h.tlsConfig)
 		if err != nil {
 			conn.Close()
