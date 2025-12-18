@@ -5,8 +5,8 @@ import androidx.preference.CheckBoxPreference
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import io.nekohasekai.sagernet.fmt.mandala.MandalaBean
-// [修正 1] 包名修正為 preferences (複數)
-import io.nekohasekai.sagernet.ui.preferences.PreferenceBindingManager
+// [修正 1] 使用單數 'preference' 包名和正確的類名 'PreferenceBinder'
+import io.nekohasekai.sagernet.ui.preference.PreferenceBinder
 
 class MandalaSettingsActivity : ProfileSettingsActivity<MandalaBean>() {
 
@@ -14,8 +14,8 @@ class MandalaSettingsActivity : ProfileSettingsActivity<MandalaBean>() {
         return MandalaBean()
     }
 
-    // [修正 2] 方法名修正為 init，這才是基類要求的抽象方法
-    override fun init(binding: PreferenceBindingManager) {
+    // [修正 2] 參數類型修正為 PreferenceBinder
+    override fun init(binding: PreferenceBinder) {
         // server
         binding.bind(
             findPreference("server"), 
@@ -29,7 +29,7 @@ class MandalaSettingsActivity : ProfileSettingsActivity<MandalaBean>() {
             bean.serverPort,
             { bean.serverPort = it },
             Int::toString,
-            String::toInt
+            { it.toInt() } // [修正 3] 使用 Lambda 解決 String::toInt 歧義
         )
 
         // username
@@ -52,7 +52,7 @@ class MandalaSettingsActivity : ProfileSettingsActivity<MandalaBean>() {
             bean.security,
             { bean.security = it },
             Int::toString,
-            String::toInt
+            { it.toInt() } // [修正 3] 使用 Lambda 解決 String::toInt 歧義
         )
 
         // sni
