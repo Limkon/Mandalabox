@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <androidx.preference.PreferenceCategory android:title="@string/server">
+        <EditTextPreference
+            android:key="address"
+            android:title="@string/server_address"
+            app:useSimpleSummaryProvider="true" />
+
+        <io.nekohasekai.sagernet.widget.AutoCollapseTextView
+            android:defaultValue="1080"
+            android:inputType="number"
+            android:key="port"
+            android:title="@string/server_port"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            android:key="username"
+            android:title="@string/username"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            android:inputType="textPassword"
+            android:key="password"
+            android:title="@string/password"
+            app:useSimpleSummaryProvider="true" />
+    </androidx.preference.PreferenceCategory>
+
+    <androidx.preference.PreferenceCategory android:title="@string/security">
+        <io.nekohasekai.sagernet.ui.SimpleMenuPreference
+            android:entries="@array/security_entries"
+            android:entryValues="@array/security_values"
+            android:key="security"
+            android:summary="%s"
+            android:title="@string/security" />
+
+        <EditTextPreference
+            android:dependency="security"
+            android:key="sni"
+            android:title="SNI"
+            app:useSimpleSummaryProvider="true" />
+
+        <SwitchPreference
+            android:dependency="security"
+            android:key="allow_insecure"
+            android:title="@string/allow_insecure" />
+    </androidx.preference.PreferenceCategory>
+
+    <androidx.preference.PreferenceCategory android:title="@string/transport_plugin">
+        <io.nekohasekai.sagernet.ui.SimpleMenuPreference
+            android:entries="@array/transport_entries"
+            android:entryValues="@array/transport_values"
+            android:key="transport"
+            android:summary="%s"
+            android:title="@string/transport" />
+
+        <EditTextPreference
+            android:dependency="transport"
+            android:key="ws_path"
+            android:title="WebSocket Path"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            android:dependency="transport"
+            android:key="ws_host"
+            android:title="WebSocket Host"
+            app:useSimpleSummaryProvider="true" />
+    </androidx.preference.PreferenceCategory>
+
+</androidx.preference.PreferenceScreen>
