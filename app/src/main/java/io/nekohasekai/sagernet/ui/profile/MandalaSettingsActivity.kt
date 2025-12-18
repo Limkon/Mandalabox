@@ -1,74 +1,74 @@
 package io.nekohasekai.sagernet.ui.profile
 
 import android.os.Bundle
+import androidx.preference.CheckBoxPreference
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
-import androidx.preference.CheckBoxPreference
-import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.fmt.mandala.MandalaBean
-import io.nekohasekai.sagernet.ui.preferences.PreferenceBindingManager
+// 尝试使用单数形式的包名，如果仍报错，通常基类已经包含此引用
+import io.nekohasekai.sagernet.ui.preference.PreferenceBindingManager
 
-// [修正 1] 必須指定泛型 <MandalaBean>
 class MandalaSettingsActivity : ProfileSettingsActivity<MandalaBean>() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        
-        // [修正 2] 根據日誌錯誤 "Too many arguments"，這裡改為無參構造
-        // 如果您的項目版本不同報錯，請嘗試改回 PreferenceBindingManager(this)
-        val binding = PreferenceBindingManager() 
+    // [修正 1] 必须实现此方法，返回一个新的 Bean 实例
+    override fun createEntity(): MandalaBean {
+        return MandalaBean()
+    }
 
-        // 綁定服務器地址
+    // [修正 2] 使用 initializeCallback 而不是 onCreate
+    // 这样系统会将准备好的 binding 管理器传给我们，无需自己实例化
+    override fun initializeCallback(binding: PreferenceBindingManager) {
+        // server
         binding.bind(
-            findPreference<EditTextPreference>("server"),
-            profile.serverAddress,
-            { profile.serverAddress = it }
+            findPreference("server"), 
+            bean.serverAddress, // [修正 3] 使用 'bean' 而不是 'profile'
+            { bean.serverAddress = it }
         )
 
-        // 綁定端口 (Int 需要轉換)
+        // port
         binding.bind(
-            findPreference<EditTextPreference>("port"),
-            profile.serverPort,
-            { profile.serverPort = it },
+            findPreference("port"),
+            bean.serverPort,
+            { bean.serverPort = it },
             Int::toString,
             String::toInt
         )
 
-        // 綁定用戶名
+        // username
         binding.bind(
-            findPreference<EditTextPreference>("username"),
-            profile.username,
-            { profile.username = it }
+            findPreference("username"),
+            bean.username,
+            { bean.username = it }
         )
 
-        // 綁定密碼
+        // password
         binding.bind(
-            findPreference<EditTextPreference>("password"),
-            profile.password,
-            { profile.password = it }
+            findPreference("password"),
+            bean.password,
+            { bean.password = it }
         )
 
-        // 綁定安全設置 (TLS)
+        // security (TLS)
         binding.bind(
-            findPreference<ListPreference>("security"),
-            profile.security,
-            { profile.security = it },
+            findPreference("security"),
+            bean.security,
+            { bean.security = it },
             Int::toString,
             String::toInt
         )
 
-        // 綁定 SNI (僅在 TLS 開啟時有效，這裡簡單綁定)
+        // sni
         binding.bind(
-            findPreference<EditTextPreference>("sni"),
-            profile.sni,
-            { profile.sni = it }
+            findPreference("sni"),
+            bean.sni,
+            { bean.sni = it }
         )
 
-        // 綁定允許不安全連接
+        // allow_insecure
         binding.bind(
-            findPreference<CheckBoxPreference>("allow_insecure"),
-            profile.allowInsecure,
-            { profile.allowInsecure = it }
+            findPreference("allow_insecure"),
+            bean.allowInsecure,
+            { bean.allowInsecure = it }
         )
     }
 }
