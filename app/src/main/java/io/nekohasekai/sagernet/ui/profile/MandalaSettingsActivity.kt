@@ -1,12 +1,10 @@
 package io.nekohasekai.sagernet.ui.profile
 
 import android.os.Bundle
-import androidx.preference.CheckBoxPreference
-import androidx.preference.EditTextPreference
-import androidx.preference.ListPreference
+import androidx.preference.Preference
 import io.nekohasekai.sagernet.fmt.mandala.MandalaBean
-// [修正 1] 使用 NekoBox 專有的包路徑
-import moe.matsuri.nb4a.ui.preference.PreferenceBinder
+// [修正1] 尝试使用 NekoBox 的 Binder 包路径 (如果报错，请尝试删除此行让 IDE 自动导入)
+import moe.matsuri.nb4a.ui.PreferenceBinder 
 
 class MandalaSettingsActivity : ProfileSettingsActivity<MandalaBean>() {
 
@@ -14,59 +12,80 @@ class MandalaSettingsActivity : ProfileSettingsActivity<MandalaBean>() {
         return MandalaBean()
     }
 
-    // [修正 2] 此時 PreferenceBinder 應該能正確識別，init 方法簽名匹配
+    // [修正2] 使用 'data' 作为变量名 (NekoBox 基类通常命名为 data)
     override fun init(binding: PreferenceBinder) {
         // server
-        binding.bind(
-            findPreference("server"), 
-            bean.serverAddress, // [修正 3] 使用 'bean' 而不是 'profile'
-            { bean.serverAddress = it }
-        )
+        val serverPref = findPreference<Preference>("server")
+        if (serverPref != null) {
+            binding.bind(
+                serverPref, 
+                data.serverAddress, 
+                { data.serverAddress = it }
+            )
+        }
 
         // port
-        binding.bind(
-            findPreference("port"),
-            bean.serverPort,
-            { bean.serverPort = it },
-            Int::toString,
-            { it.toInt() }
-        )
+        val portPref = findPreference<Preference>("port")
+        if (portPref != null) {
+            binding.bind(
+                portPref,
+                data.serverPort,
+                { data.serverPort = it },
+                Int::toString,
+                { it.toInt() }
+            )
+        }
 
         // username
-        binding.bind(
-            findPreference("username"),
-            bean.username,
-            { bean.username = it }
-        )
+        val userPref = findPreference<Preference>("username")
+        if (userPref != null) {
+            binding.bind(
+                userPref,
+                data.username,
+                { data.username = it }
+            )
+        }
 
         // password
-        binding.bind(
-            findPreference("password"),
-            bean.password,
-            { bean.password = it }
-        )
+        val passPref = findPreference<Preference>("password")
+        if (passPref != null) {
+            binding.bind(
+                passPref,
+                data.password,
+                { data.password = it }
+            )
+        }
 
         // security (TLS)
-        binding.bind(
-            findPreference("security"),
-            bean.security,
-            { bean.security = it },
-            Int::toString,
-            { it.toInt() }
-        )
+        val secPref = findPreference<Preference>("security")
+        if (secPref != null) {
+            binding.bind(
+                secPref,
+                data.security,
+                { data.security = it },
+                Int::toString,
+                { it.toInt() }
+            )
+        }
 
         // sni
-        binding.bind(
-            findPreference("sni"),
-            bean.sni,
-            { bean.sni = it }
-        )
+        val sniPref = findPreference<Preference>("sni")
+        if (sniPref != null) {
+            binding.bind(
+                sniPref,
+                data.sni,
+                { data.sni = it }
+            )
+        }
 
         // allow_insecure
-        binding.bind(
-            findPreference("allow_insecure"),
-            bean.allowInsecure,
-            { bean.allowInsecure = it }
-        )
+        val insecPref = findPreference<Preference>("allow_insecure")
+        if (insecPref != null) {
+            binding.bind(
+                insecPref,
+                data.allowInsecure,
+                { data.allowInsecure = it }
+            )
+        }
     }
 }
