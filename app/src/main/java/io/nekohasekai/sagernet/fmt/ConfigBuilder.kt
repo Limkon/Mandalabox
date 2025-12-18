@@ -11,6 +11,7 @@ import io.nekohasekai.sagernet.fmt.ConfigBuildResult.IndexEntity
 import io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean
 import io.nekohasekai.sagernet.fmt.hysteria.buildSingBoxOutboundHysteriaBean
 import io.nekohasekai.sagernet.fmt.internal.ChainBean
+import io.nekohasekai.sagernet.fmt.mandala.MandalaBean
 import io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean
 import io.nekohasekai.sagernet.fmt.shadowsocks.buildSingBoxOutboundShadowsocksBean
 import io.nekohasekai.sagernet.fmt.socks.SOCKSBean
@@ -364,6 +365,25 @@ fun buildConfig(
 
                         is AnyTLSBean ->
                             buildSingBoxOutboundAnyTLSBean(bean)
+
+                        is MandalaBean -> Outbound().apply {
+                            type = "mandala"
+                            _hack_config_map["server"] = bean.serverAddress
+                            _hack_config_map["port"] = bean.serverPort
+                            _hack_config_map["username"] = bean.username
+                            _hack_config_map["password"] = bean.password
+                            if (bean.security == MandalaBean.SECURITY_TLS) {
+                                _hack_config_map["tls"] = mapOf(
+                                    "enabled" to true,
+                                    "server_name" to bean.sni,
+                                    "insecure" to bean.allowInsecure,
+                                    "utls" to mapOf(
+                                        "enabled" to true,
+                                        "fingerprint" to "chrome"
+                                    )
+                                )
+                            }
+                        }
 
                         else -> throw IllegalStateException("can't reach")
                     }
