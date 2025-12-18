@@ -3,7 +3,7 @@ package mandala
 import (
 	"context"
 	"fmt"
-	"io" // [修复] 添加缺失的 io 包
+	"io"
 	"net"
 	"os"
 
@@ -15,7 +15,6 @@ import (
 	"github.com/sagernet/sing/common/json"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
-	"github.com/sagernet/sing/common/rw"
 )
 
 func init() {
@@ -24,7 +23,6 @@ func init() {
 
 // Options 定义 Android 端传来的配置结构
 type Options struct {
-	// [修复] 移除 option.OutboundCommonOptions，在新版中直接嵌入 DialerOptions
 	option.DialerOptions
 	Server   string                     `json:"server"`
 	Port     uint16                     `json:"port"`
@@ -39,13 +37,12 @@ type Outbound struct {
 	dialer     N.Dialer
 	serverAddr M.Socksaddr
 	client     *Client
-	tlsConfig  tls.Config // [修复] tls.Config 是接口，不需要指针 (*)
+	tlsConfig  tls.Config
 }
 
 func NewOutbound(ctx context.Context, outboundOption option.Outbound) (adapter.Outbound, error) {
 	var options Options
 
-	// [修复] outboundOption.Options 已经是 map[string]any，需要先转回 bytes 再解析
 	if outboundOption.Options != nil {
 		bytes, err := json.Marshal(outboundOption.Options)
 		if err != nil {
@@ -67,7 +64,6 @@ func NewOutbound(ctx context.Context, outboundOption option.Outbound) (adapter.O
 	}
 
 	var err error
-	// [修复] 适配新的 Dialer API
 	outbound.dialer, err = dialer.New(ctx, options.DialerOptions, outboundOption.Tag != "")
 	if err != nil {
 		return nil, err
@@ -91,6 +87,11 @@ func (h *Outbound) Tag() string {
 	return h.myTag
 }
 
+// [修复 1] 添加 Network 方法，声明支持 TCP
+func (h *Outbound) Network() []string {
+	return []string{"tcp"}
+}
+
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
 	// 1. 连接代理服务器
 	conn, err := h.dialer.DialContext(ctx, "tcp", h.serverAddr)
@@ -100,7 +101,6 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 
 	// 2. TLS 握手 (如果启用)
 	if h.tlsConfig != nil {
-		// [修复] tls.Config 接口直接传值
 		conn, err = tls.ClientHandshake(ctx, conn, h.tlsConfig)
 		if err != nil {
 			conn.Close()
@@ -161,12 +161,15 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 	return c.Conn.Write(b)
 }
 
-// WriteBuffer 实现 sing-box 的 LinkWriter 接口，提高性能
+// WriteBuffer 实现 sing-box 的 LinkWriter 接口
 func (c *Conn) WriteBuffer(buffer *buf.Buffer) error {
 	if err := c.handshake(); err != nil {
+		buffer.Release()
 		return err
 	}
-	return rw.WriteBuffer(c.Conn, buffer)
+	// [修复 2] 使用 WriteTo 替代 rw.WriteBuffer
+	_, err := buffer.WriteTo(c.Conn)
+	return err
 }
 
 // ReaderFrom 实现 io.ReaderFrom
